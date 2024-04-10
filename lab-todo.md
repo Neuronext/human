@@ -17,4 +17,12 @@ changes todo (04/01):
 - can we downsample some of the coords or the gestures?
 - are we able to record muse when the video is getting captured? meaning record the raw samples
 - do we need to pair device or direct record works?
-- 
+- visualize the data to see if it is dummy or not 
+- containerize the app using podman 
+- check how much space each 1 min video takes
+- check how much space each 1 min of gestures etc data takes + muse
+- button for start and stop
+- check how much duration i can take for one person 
+- check if i can record video instead and apply gestures in post
+- eeg data needs to recorded concurrently with the video
+- deploy - check what ports need to be opened, check if port 3k is working
