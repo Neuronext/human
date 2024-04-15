@@ -534,20 +534,6 @@ function runHumanDetect(input, canvas, timestamp) {
           document.getElementById('log').innerText += `\nHuman error: ${result.error}`;
         } else {
           lastDetectedResult = result;
-          console.log('lastDetectedResult', lastDetectedResult);
-          // addToResults({
-          //   timestamp: Date.now(),
-          //   faceCount: lastDetectedResult.face.length,
-          //   data: lastDetectedResult
-          // });
-
-          if (result) { // Assume gesture data is part of result
-            gestureData.push({
-              timestamp: Date.now(),
-              faceCount: result.face.length,
-              data: result
-            }); // Collect gesture data
-          }
           if (!ui.drawThread) drawResults(input);
           ui.framesDetect++;
           ui.detectThread = requestAnimationFrame((now) => runHumanDetect(input, canvas, now));
@@ -1099,59 +1085,59 @@ document.body.removeChild(link);
 accumulatedBlobParts = [];
 }
 
-// function drawGestures(ctx) {
-// // Example: Draw a simple rectangle for demonstration
-// ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-// ctx.fillRect(10, 10, 100, 100);  // Draw a red transparent box at (10,10)
-// }
+function drawGestures(ctx) {
+// Example: Draw a simple rectangle for demonstration
+ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+ctx.fillRect(10, 10, 100, 100);  // Draw a red transparent box at (10,10)
+}
 
-// function drawVideo(video, canvas, ctx) {
-// if (video.paused || video.ended) return;
-// ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-// // Call your gesture drawing function here, for example:
-// drawGestures(ctx);
-// requestAnimationFrame(() => drawVideo(video, canvas, ctx));
-// }
+function drawVideo(video, canvas, ctx) {
+if (video.paused || video.ended) return;
+ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+// Call your gesture drawing function here, for example:
+drawGestures(ctx);
+requestAnimationFrame(() => drawVideo(video, canvas, ctx));
+}
 
-// async function startRecordingBKP(stream) {
-// const video = document.createElement('video');
-// video.srcObject = stream;
-// video.play();
+async function startRecordingBKP(stream) {
+const video = document.createElement('video');
+video.srcObject = stream;
+video.play();
 
-// const canvas = document.getElementById('canvas');  // Assume canvas is already in the DOM
-// const ctx = canvas.getContext('2d');
+const canvas = document.getElementById('canvas');  // Assume canvas is already in the DOM
+const ctx = canvas.getContext('2d');
 
-// video.onloadedmetadata = () => {
-//   canvas.width = video.videoWidth;
-//   canvas.height = video.videoHeight;
-// };
+video.onloadedmetadata = () => {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+};
 
-// video.play();
-// const outputStream = canvas.captureStream(); // Capture the canvas output as stream
-// recordCanvas(outputStream); // Start recording the canvas stream
+video.play();
+const outputStream = canvas.captureStream(); // Capture the canvas output as stream
+recordCanvas(outputStream); // Start recording the canvas stream
 
-// function updateCanvas() {
-//   drawResults(video); // Existing function to draw results
-//   if (!video.paused && !video.ended) {
-//     requestAnimationFrame(updateCanvas); // Continuously update canvas
-//   }
-// }
+function updateCanvas() {
+  drawResults(video); // Existing function to draw results
+  if (!video.paused && !video.ended) {
+    requestAnimationFrame(updateCanvas); // Continuously update canvas
+  }
+}
 
-// requestAnimationFrame(updateCanvas); // Start the loop
-// }
+requestAnimationFrame(updateCanvas); // Start the loop
+}
 
-// function recordCanvas(stream) {
-// videoChunks = []; // Ensure this array is cleared or properly initialized
-// const preferredFormat = 'video/webm; codecs=vp9';
-// if (!MediaRecorder.isTypeSupported(preferredFormat)) {
-//   console.error('Preferred media format not supported');
-//   return;
-// }
+function recordCanvas(stream) {
+videoChunks = []; // Ensure this array is cleared or properly initialized
+const preferredFormat = 'video/webm; codecs=vp9';
+if (!MediaRecorder.isTypeSupported(preferredFormat)) {
+  console.error('Preferred media format not supported');
+  return;
+}
 
-// mediaRecorder = new MediaRecorder(stream, { mimeType: preferredFormat });
-// mediaRecorder.ondataavailable = (e) => videoChunks.push(e.data);
-// mediaRecorder.start();
-// }
+mediaRecorder = new MediaRecorder(stream, { mimeType: preferredFormat });
+mediaRecorder.ondataavailable = (e) => videoChunks.push(e.data);
+mediaRecorder.start();
+}
 
 async function stopAndSaveRecording() {
 return new Promise((resolve, reject) => {
@@ -1320,78 +1306,48 @@ toggleBtn.addEventListener('click', () => {
 
 // Recording functions remain the same as previously defined
 
+
+
 let mediaRecorder2;
 let recordedChunks = [];
-let gestureData = [];
 
-// Start recording the canvas stream and gesture data
+// Start recording the canvas stream
 function startRecording(canvas) {
-  const stream = canvas.captureStream(30); // Capture at 30 fps
-  let mimeType = MediaRecorder.isTypeSupported('video/mp4; codecs="avc1.42E01E, mp4a.40.2"') ? 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"' : 'video/webm; codecs=vp9';
-  mediaRecorder2 = new MediaRecorder(stream, { mimeType });
-  mediaRecorder2.ondataavailable = event => {
-    if (event.data.size > 0) recordedChunks.push(event.data);
-  };
-  mediaRecorder2.onstop = () => {
-    const blob = new Blob(recordedChunks, { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    downloadVideo(url, mimeType);
-    recordedChunks = [];
-  };
-  mediaRecorder2.start();
-  gestureData = []; // Reset gesture data
+    const stream = canvas.captureStream(30); // Capture at 30 fps
+    mediaRecorder2 = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
+
+    mediaRecorder2.ondataavailable = function(event) {
+        if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+        }
+    };
+
+    mediaRecorder2.onstop = function() {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        downloadVideo(url);
+        recordedChunks = []; // Clear recorded chunks
+    };
+
+    mediaRecorder2.start();
 }
 
-// Function to download the video with timestamp in filename
-function downloadVideo(url, mimeType) {
-  const now = new Date();
-  const timestamp = now.toISOString().replace(/:/g, '-').replace(/\.\d+Z$/, '');
-  const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
-  const filename = `recordedVideo_${timestamp}.${extension}`;
-
-  const downloadLink = document.createElement('a');
-  downloadLink.href = url;
-  downloadLink.download = filename; // Use the timestamped filename with correct extension
-  document.body.appendChild(downloadLink);
-  downloadLink.click();
-  document.body.removeChild(downloadLink);
-  URL.revokeObjectURL(url); // Clean up the URL object
-}
-
-// Function to download CSV or JSON
-function downloadData(data, format = 'csv') {
-  let content, mimeType, extension;
-  if (format === 'csv') {
-    content = "Gesture\n";
-    data.forEach(item => {
-      content += `${item}\n`; // Simplified for demonstration
-    });
-    mimeType = "text/csv";
-    extension = "csv";
-  } else {
-    content = JSON.stringify(data, null, 2);
-    mimeType = "application/json";
-    extension = "json";
-  }
-
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const downloadLink = document.createElement('a');
-  downloadLink.href = url;
-  downloadLink.download = `gesture_data.${extension}`;
-  document.body.appendChild(downloadLink);
-  downloadLink.click();
-  document.body.removeChild(downloadLink);
-  URL.revokeObjectURL(url); // Clean up the URL object
-}
-
-
-// Function to stop recording and save CSV
+// Function to stop recording
 function stopRecording() {
-  if (mediaRecorder2) {
-    mediaRecorder2.stop(); // This will trigger the onstop event which downloads the video
-  }
-  downloadData(gestureData, 'json'); // Choose 'json' if you prefer JSON format
+    if (mediaRecorder2) {
+      mediaRecorder2.stop();
+    }
+}
+
+// Function to download the video
+function downloadVideo(url) {
+    const downloadLink = document.createElement('a');
+    downloadLink.href = url;
+    downloadLink.download = 'recordedVideo.webm';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    URL.revokeObjectURL(url); // Clean up the URL object
 }
 
 async function main() {
