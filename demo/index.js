@@ -151,15 +151,12 @@ const menu = {};
 let worker;
 let bench;
 let lastDetectedResult = {};
-let accumulatedResults = [];
-let accumulatedBlobParts = [];
-let currentChunk = [];
-const maxChunkSize = 10;
-let isCollectingResults = false;
-let resultsCollectionTimeout;
-let countdownInterval = 5; // in seconds
-let mediaRecorder; // Global for media recording
-let videoChunks = []; // Store video data chunks
+let mediaRecorder;
+let isDetectionRunning = false;
+let isCollectingGestures = false;
+let recordedChunks = [];
+let gestureData = [];
+
 
 // helper function: async pause
 // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
@@ -534,17 +531,10 @@ function runHumanDetect(input, canvas, timestamp) {
           document.getElementById('log').innerText += `\nHuman error: ${result.error}`;
         } else {
           lastDetectedResult = result;
-          console.log('lastDetectedResult', lastDetectedResult);
-          // addToResults({
-          //   timestamp: Date.now(),
-          //   faceCount: lastDetectedResult.face.length,
-          //   data: lastDetectedResult
-          // });
-
-          if (result) { // Assume gesture data is part of result
+          if (result && isCollectingGestures) { // Assume gesture data is part of result
             gestureData.push({
               timestamp: Date.now(),
-              faceCount: result.face.length,
+              faceCount: result.face ? result.face.length : 0,
               data: result
             }); // Collect gesture data
           }
@@ -914,325 +904,9 @@ async function pwaRegister() {
   }
 }
 
-// changes made by pratiksha 
-
-// setup webcam
-let initialCameraAccess2 = true;
-async function setupCameraUpdated() {
-  console.log("ui busy ", ui.busy)
-  // ui.busy = false
-  if (ui.busy) return null;
-  ui.busy = true;
-  const video = document.getElementById('video');
-  console.log('[in setupCamera] video ', video)
-  console.log('[in setupCamera ] video muted ', video.muted)
-  console.log('[in setupCamera ] video paused ', video.paused)
-  video.muted = false;
-  const canvas = document.getElementById('canvas');
-  const output = document.getElementById('log');
-  if (ui.useWebRTC) {
-    status('setting up webrtc connection');
-    try {
-      video.onloadeddata = () => ui.camera = { name: ui.webRTCStream, width: video.videoWidth, height: video.videoHeight, facing: 'default' };
-      await webRTC(ui.webRTCServer, ui.webRTCStream, video);
-    } catch (err) {
-      log(err);
-    } finally {
-      // status();
-    }
-    return '';
-  }
-  const live = video.srcObject ? ((video.srcObject.getVideoTracks()[0].readyState === 'live') && (video.readyState > 2) && (!video.paused)) : false;
-  let msg = '';
-  status('setting up camera');
-  // setup webcam. note that navigator.mediaDevices requires that page is accessed via https
-  if (!navigator.mediaDevices) {
-    msg = 'camera access not supported';
-    output.innerText += `\n${msg}`;
-    log(msg);
-    status(msg);
-    ui.busy = false;
-    return msg;
-  }
-  let stream;
-  const constraints = {
-    audio: false,
-    video: {
-      facingMode: ui.facing ? 'user' : 'environment',
-      resizeMode: ui.crop ? 'crop-and-scale' : 'none',
-      width: { ideal: document.body.clientWidth },
-      // height: { ideal: document.body.clientHeight }, // not set as we're using aspectRation to get height instead
-      aspectRatio: document.body.clientWidth / document.body.clientHeight,
-      // deviceId: 'xxxx' // if you have multiple webcams, specify one to use explicitly
-    },
-  };
-  // enumerate devices for diag purposes
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  if (initialCameraAccess2) log('enumerated input devices:', devices);
-  // to select specific camera add deviceid from enumerated devices to camera constraints
-  // constraints.video.deviceId = '6794499e046cf4aebf41cfeb7d1ef48a17bd65f72bafb55f3c0b06405d3d487b';
-  if (initialCameraAccess2) log('camera constraints', constraints);
-  try {
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
-    console.log('Camera stream obtained:', stream);
-    video.srcObject = stream
-    // return stream
-    // video.srcObject = stream;
-    await new Promise((resolve) => {
-      video.onloadedmetadata = () => {
-        console.log('Video metadata loaded');
-        resolve(stream);
-      };
-    });
-
-    console.log('Camera stream obtained and video configured:', stream);
-
-    // Gesture detection or any additional setup
-    if ((video.srcObject.getVideoTracks()[0].readyState === 'live') && (video.readyState > 2) && (!video.paused)) {
-      if (!ui.detectThread) runHumanDetect(video, canvas);
-      console.log('GESTURE ADDED')
-    }
-
-    // Set UI elements based on video settings
-    const settings = stream.getVideoTracks()[0].getSettings();
-    // ui.camera = { name: settings.label.toLowerCase(), width: settings.width, height: settings.height, facing: settings.facingMode === 'user' ? 'front' : 'back' };
-
-
-    try {
-      ui.camera = {
-        name: settings.label ? settings.label.toLowerCase() : 'Unknown Device',
-        width: settings.width,
-        height: settings.height,
-        facing: settings.facingMode === 'user' ? 'front' : 'back'
-      };
-    } catch (error) {
-      console.error("Error configuring stream settings:", error);
-      return null; // Return or handle error appropriately
-    }
-
-
-    if (settings.width > settings.height) canvas.style.width = '100vw';
-    else canvas.style.height = '100vh';
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ui.menuWidth.input.setAttribute('value', video.videoWidth);
-    ui.menuHeight.input.setAttribute('value', video.videoHeight);
-
-    // Optional: Handle autoplay
-    if (ui.autoPlay) await video.play();
-
-    return stream; 
-
-  } catch (err) {
-    if (err.name === 'PermissionDeniedError' || err.name === 'NotAllowedError') msg = 'camera permission denied';
-    else if (err.name === 'SourceUnavailableError') msg = 'camera not available';
-    else msg = `camera error: ${err.message || err}`;
-    output.innerText += `\n${msg}`;
-    status(msg);
-    log('camera error:', err);
-    ui.busy = false;
-    return msg;
-  }
-  const tracks = stream.getVideoTracks();
-  if (tracks && tracks.length >= 1) {
-    if (initialCameraAccess2) log('enumerated viable tracks:', tracks);
-  } else {
-    ui.busy = false;
-    return 'no camera track';
-  }
-  const track = stream.getVideoTracks()[0];
-  const settings = track.getSettings();
-  if (initialCameraAccess2) log('selected video source:', track, settings);
-  ui.camera = { name: track.label.toLowerCase(), width: settings.width, height: settings.height, facing: settings.facingMode === 'user' ? 'front' : 'back' };
-  initialCameraAccess2 = false;
-
-  if (!stream) return 'camera stream empty';
-
-  const ready = new Promise((resolve) => { (video.onloadeddata = () => resolve(true)); });
-  video.srcObject = stream;
-  await ready;
-  if (settings.width > settings.height) canvas.style.width = '100vw';
-  else canvas.style.height = '100vh';
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  ui.menuWidth.input.setAttribute('value', video.videoWidth);
-  ui.menuHeight.input.setAttribute('value', video.videoHeight);
-  if (live || ui.autoPlay) await videoPlay();
-  if ((live || ui.autoPlay) && !ui.detectThread) runHumanDetect(video, canvas); // eslint-disable-line no-use-before-define
-  return 'camera stream ready';
-}
-
-function addToResults(result) {
-  if (!isCollectingResults) return;
-  
-  currentChunk.push(result);
-  if (currentChunk.length >= maxChunkSize) {
-    accumulatedBlobParts.push([...currentChunk]);
-    currentChunk = [];
-  }
-}
-
-// TODO: the chunking logic needs to change
-function finalizeResults() {
-console.log('Finalizing results:', accumulatedBlobParts);
-if (currentChunk.length > 0) {
-  accumulatedBlobParts.push([...currentChunk]);
-  currentChunk = [];
-}
-
-const allResults = accumulatedBlobParts.flat();
-const jsonString = JSON.stringify(allResults, null, 2);
-const resultsBlob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
-return resultsBlob;
-}
-
-function downloadResults() {
-console.log("Attempting to download CSV results...");
-const resultsBlob = finalizeResults();
-const downloadUrl = URL.createObjectURL(resultsBlob);
-const link = document.createElement('a');
-link.href = downloadUrl;
-link.setAttribute('download', 'humanDetectionResults.json');
-document.body.appendChild(link);
-link.click();
-document.body.removeChild(link);
-accumulatedBlobParts = [];
-}
-
-// function drawGestures(ctx) {
-// // Example: Draw a simple rectangle for demonstration
-// ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-// ctx.fillRect(10, 10, 100, 100);  // Draw a red transparent box at (10,10)
-// }
-
-// function drawVideo(video, canvas, ctx) {
-// if (video.paused || video.ended) return;
-// ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-// // Call your gesture drawing function here, for example:
-// drawGestures(ctx);
-// requestAnimationFrame(() => drawVideo(video, canvas, ctx));
-// }
-
-// async function startRecordingBKP(stream) {
-// const video = document.createElement('video');
-// video.srcObject = stream;
-// video.play();
-
-// const canvas = document.getElementById('canvas');  // Assume canvas is already in the DOM
-// const ctx = canvas.getContext('2d');
-
-// video.onloadedmetadata = () => {
-//   canvas.width = video.videoWidth;
-//   canvas.height = video.videoHeight;
-// };
-
-// video.play();
-// const outputStream = canvas.captureStream(); // Capture the canvas output as stream
-// recordCanvas(outputStream); // Start recording the canvas stream
-
-// function updateCanvas() {
-//   drawResults(video); // Existing function to draw results
-//   if (!video.paused && !video.ended) {
-//     requestAnimationFrame(updateCanvas); // Continuously update canvas
-//   }
-// }
-
-// requestAnimationFrame(updateCanvas); // Start the loop
-// }
-
-// function recordCanvas(stream) {
-// videoChunks = []; // Ensure this array is cleared or properly initialized
-// const preferredFormat = 'video/webm; codecs=vp9';
-// if (!MediaRecorder.isTypeSupported(preferredFormat)) {
-//   console.error('Preferred media format not supported');
-//   return;
-// }
-
-// mediaRecorder = new MediaRecorder(stream, { mimeType: preferredFormat });
-// mediaRecorder.ondataavailable = (e) => videoChunks.push(e.data);
-// mediaRecorder.start();
-// }
-
-async function stopAndSaveRecording() {
-return new Promise((resolve, reject) => {
-  if (!mediaRecorder) {
-    console.error('MediaRecorder not initialized');
-    reject('MediaRecorder not initialized');
-  }
-
-  mediaRecorder.onstop = async () => {
-    const blob = new Blob(videoChunks, { type: 'video/webm' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'recordedVideo.webm');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    resolve(url);
-  };
-  mediaRecorder.stop();
-});
-}
-
-async function startResultsCollection() {
-let timeLeft = countdownInterval;
-document.getElementById('btnStartCSV').disabled = true;
-document.getElementById('btnStartCSV').innerText = timeLeft.toString();
-
-try {
-  ui.busy = false
-  const stream = await setupCameraUpdated();
-  console.log(stream)
-  if (stream) {
-    await startRecording(stream); // Start recording with the valid stream
-    if (!ui.detectThread) runHumanDetect(document.getElementById('video'), document.getElementById('canvas'));
-  } else {
-    throw new Error('No stream available from camera');
-  }
-} catch (error) {
-  console.error('Failed to start recording:', error.message);
-  document.getElementById('btnStartCSV').disabled = false;
-  return;
-}
-
-const countdown = setInterval(async () => {
-  try {
-    timeLeft--;
-    document.getElementById('btnStartCSV').innerText = timeLeft > 0 ? timeLeft.toString() : 'Downloading...';
-    if (timeLeft <= 0) {
-      clearInterval(countdown);
-      const videoURL = await stopAndSaveRecording(); // Capture and handle video URL if needed
-      downloadResults(); // Ensure downloadResults is awaited if it's asynchronous
-      console.log('download results done')
-      document.getElementById('btnStartCSV').innerText = 'Start';
-      document.getElementById('btnStartCSV').disabled = false;
-      isCollectingResults = false;
-      console.log('[in startResultsCollection] collection set to false')
-    }
-  } catch (error) {
-    console.error('Error during countdown:', error);
-    document.getElementById('btnStartCSV').innerText = 'Start'; // Ensure button resets even if there's an error
-    document.getElementById('btnStartCSV').disabled = false; // Re-enable button in case of error
-    clearInterval(countdown); // Make sure to clear the interval on error
-  }
-}, 1000);
-
-
-isCollectingResults = true;
-resultsCollectionTimeout = setTimeout(async () => {
-  clearInterval(countdown);
-  await stopAndSaveRecording();
-}, countdownInterval * 1000);
-}
-
-
-document.getElementById('btnStartCSV').innerText = 'StartCSV';
-document.getElementById('btnStartCSV').addEventListener('click', () => {
-accumulatedBlobParts = []; 
-currentChunk = []
-startResultsCollection();
-});
+/*
+============================ CHANGES MADE FOR LAB WORK ============================
+*/
 document.getElementById('recordMuse').addEventListener('click', () => {
 fetch('http://localhost:3000/record', {
   method: 'POST',
@@ -1249,55 +923,8 @@ fetch('http://localhost:3000/record', {
 });
 
 
-let snapshotInterval;
-
-function startDetectionWithSnapshot(video, intervalSeconds) {
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-
-  // Start video processing if not already playing
-  if (video.paused) video.play();
-
-  startRecording(canvas); // Start recording when detection starts
-
-  // Setup interval for taking snapshots
-  snapshotInterval = setInterval(() => {
-    takeSnapshot(video, canvas, ctx);
-  }, intervalSeconds * 1000); // Convert seconds to milliseconds
-
-  // Continue with detection logic
-  runHumanDetect(video, canvas);
-}
-
-
-
-// Function to take a snapshot
-function takeSnapshot(video, canvas, ctx) {
-  if (!video.paused && !video.ended) {
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    console.log('Snapshot taken');
-
-    // Optionally save the canvas as an image or process further
-    canvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-      console.log('Snapshot saved', url);
-      // You can display this image, download it, or send it to a server
-    });
-  }
-}
-
-function stopDetectionAndSnapshot() {
-  if (snapshotInterval) clearInterval(snapshotInterval);
-  document.getElementById('video').pause();
-  stopRecording(); // Stop recording and trigger download
-  console.log('Detection, snapshot taking, and recording stopped');
-}
-
 // Get reference to the button
 const toggleBtn = document.getElementById('toggleBtn');
-
-// Variable to track whether detection is currently running
-let isDetectionRunning = false;
 
 toggleBtn.addEventListener('click', () => {
   const video = document.getElementById('video');
@@ -1306,39 +933,36 @@ toggleBtn.addEventListener('click', () => {
     // Start detection and recording
     if (video.paused) video.play(); // Ensure video is playing
     startRecording(canvas); // Start recording canvas stream
+    isCollectingGestures = true
     runHumanDetect(video, canvas); // Start detection process
     toggleBtn.textContent = 'Stop'; // Change button text to 'Stop'
     isDetectionRunning = true;
   } else {
     // Stop detection and recording
     stopRecording(); // Stop recording and download video
-    video.pause(); // Optionally pause the video
+    // video.pause(); // Optionally pause the video
+    isCollectingGestures = false
     toggleBtn.textContent = 'Start'; // Change button text back to 'Start'
     isDetectionRunning = false;
   }
 });
 
 // Recording functions remain the same as previously defined
-
-let mediaRecorder2;
-let recordedChunks = [];
-let gestureData = [];
-
 // Start recording the canvas stream and gesture data
 function startRecording(canvas) {
   const stream = canvas.captureStream(30); // Capture at 30 fps
   let mimeType = MediaRecorder.isTypeSupported('video/mp4; codecs="avc1.42E01E, mp4a.40.2"') ? 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"' : 'video/webm; codecs=vp9';
-  mediaRecorder2 = new MediaRecorder(stream, { mimeType });
-  mediaRecorder2.ondataavailable = event => {
+  mediaRecorder = new MediaRecorder(stream, { mimeType });
+  mediaRecorder.ondataavailable = event => {
     if (event.data.size > 0) recordedChunks.push(event.data);
   };
-  mediaRecorder2.onstop = () => {
+  mediaRecorder.onstop = () => {
     const blob = new Blob(recordedChunks, { type: mimeType });
     const url = URL.createObjectURL(blob);
     downloadVideo(url, mimeType);
     recordedChunks = [];
   };
-  mediaRecorder2.start();
+  mediaRecorder.start();
   gestureData = []; // Reset gesture data
 }
 
@@ -1360,6 +984,9 @@ function downloadVideo(url, mimeType) {
 
 // Function to download CSV or JSON
 function downloadData(data, format = 'csv') {
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/:/g, '-').replace(/\.\d+Z$/, '');
+  
   let content, mimeType, extension;
   if (format === 'csv') {
     content = "Gesture\n";
@@ -1376,9 +1003,10 @@ function downloadData(data, format = 'csv') {
 
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
+  const filename = `gesture_data_${timestamp}.${extension}`;  // Add timestamp to filename
   const downloadLink = document.createElement('a');
   downloadLink.href = url;
-  downloadLink.download = `gesture_data.${extension}`;
+  downloadLink.download = filename;
   document.body.appendChild(downloadLink);
   downloadLink.click();
   document.body.removeChild(downloadLink);
@@ -1388,8 +1016,8 @@ function downloadData(data, format = 'csv') {
 
 // Function to stop recording and save CSV
 function stopRecording() {
-  if (mediaRecorder2) {
-    mediaRecorder2.stop(); // This will trigger the onstop event which downloads the video
+  if (mediaRecorder) {
+    mediaRecorder.stop(); // This will trigger the onstop event which downloads the video
   }
   downloadData(gestureData, 'json'); // Choose 'json' if you prefer JSON format
 }

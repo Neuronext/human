@@ -5,3 +5,4 @@ package-lock.json
 *.swp
 samples/**/*.mp4
 samples/**/*.webm
+test/build.log
