@@ -420,3 +420,174 @@ app.listen(port, () => {
 //     alert('Error recording: ' + error.message); // Alert the user
 //   });
 // });
+// app.get('/download/:filename', (req, res) => {
+//   const filename = req.params.filename;
+//   const filepath = path.resolve(__dirname, filename);
+//   res.download(filepath, (err) => {
+//     if (err) {
+//       console.error('Error sending file:', err);
+//     } else {
+//       // File sent successfully, now delete it
+//       fs.unlink(filepath, unlinkErr => {
+//         if (unlinkErr) console.error('Error deleting file:', unlinkErr);
+//         else console.log('File deleted successfully');
+//       });
+//     }
+//   });
+// });
+
+
+
+// document.getElementById('recordMuse').addEventListener('click', function() {
+//   const button = this;
+//   const filename = `recording_${new Date().toISOString()}.csv`.replace(/:/g, '-');
+//   let duration = 5
+//   let interval; // Declare interval here to ensure it's accessible in all contexts
+
+//   button.innerText = `Starting recording...`;
+
+//   // Start recording immediately
+//   fetch('http://localhost:3000/record', {
+//     method: 'POST',
+//     headers: {
+//       'Content-Type': 'application/json',
+//     },
+//     body: JSON.stringify({ duration, filename })
+//   })
+//   .then(response => {
+//     if (!response.ok) {
+//       throw new Error('Failed to start recording');
+//     }
+//     return response.json(); // Assuming the server sends back a JSON response
+//   })
+//   .then(data => {
+//     button.innerText = `Recording: ${duration} seconds remaining`;
+//     interval = setInterval(() => {
+//       duration -= 1;
+//       button.innerText = `Recording: ${duration} seconds remaining`;
+//       if (duration === 0) {
+//         clearInterval(interval);
+//         button.innerText = 'Preparing download...';
+//         // Wait a moment before trying to download to ensure the server is ready
+//         setTimeout(() => {
+//           fetch(`http://localhost:3000/download/${filename}`)
+//           .then(downloadResponse => {
+//             if (!downloadResponse.ok) {
+//               throw new Error(`Failed to download file: ${downloadResponse.status} ${downloadResponse.statusText}`);
+//             }
+//             return downloadResponse.blob();
+//           })
+//           .then(blob => {
+//             const url = window.URL.createObjectURL(blob);
+//             const a = document.createElement('a');
+//             a.href = url;
+//             a.download = filename;
+//             document.body.appendChild(a);
+//             a.click();
+//             document.body.removeChild(a);
+//             button.innerText = 'Record Muse'; // Reset the button text after download
+//           })
+//           .catch(downloadError => {
+//             console.error('Download Error:', downloadError);
+//             button.innerText = 'Record Muse'; // Reset the button text
+//             alert('Error downloading file: ' + downloadError.message); // Alert the user
+//           });
+//         }, 1000);
+//       }
+//     }, 1000);
+//   })
+//   .catch(error => {
+//     console.error('Error:', error);
+//     clearInterval(interval);
+//     button.innerText = 'Record Muse'; // Reset the button text on error
+//     alert('Error recording: ' + error.message); // Alert the user
+//   });
+// });
+
+
+
+// document.getElementById('recordMuse').addEventListener('click', function() {
+//   const button = this;
+//   const filename = `recording_${new Date().toISOString()}.csv`.replace(/:/g, '-');
+//   let duration = 5;
+
+//   button.innerText = `Starting recording...`;
+
+//   fetch('http://localhost:3000/record', {
+//     method: 'POST',
+//     headers: {
+//       'Content-Type': 'application/json',
+//     },
+//     body: JSON.stringify({ duration, filename })
+//   })
+//   .then(response => {
+//     if (!response.ok) {
+//       throw new Error('Failed to start recording');
+//     }
+//     return response.json(); 
+//   })
+//   .then(data => {
+//     button.innerText = `Recording: ${duration} seconds remaining`;
+//     let interval = setInterval(() => {
+//       duration -= 1;
+//       if (duration >= 0) {
+//         button.innerText = `Recording: ${duration} seconds remaining`;
+//       }
+//       if (duration === 0) {
+//         clearInterval(interval);
+//         button.innerText = 'Preparing download...';
+//         setTimeout(() => downloadFile(filename, button), 1000);
+//       }
+//     }, 1000);
+//   })
+//   .catch(error => {
+//     console.error('Error:', error);
+//     button.innerText = 'Record Muse';
+//     alert('Error recording: ' + error.message);
+//   });
+// });
+
+// function downloadFile(filename, button) {
+//   fetch(`http://localhost:3000/download/${filename}`)
+//     .then(downloadResponse => {
+//       if (!downloadResponse.ok) {
+//         throw new Error(`Failed to download file: ${downloadResponse.status} ${downloadResponse.statusText}`);
+//       }
+//       return downloadResponse.blob();
+//     })
+//     .then(blob => {
+//       const url = window.URL.createObjectURL(blob);
+//       const a = document.createElement('a');
+//       a.href = url;
+//       a.download = filename;
+//       document.body.appendChild(a);
+//       a.click();
+//       document.body.removeChild(a);
+//       button.innerText = 'Record Muse';
+//     })
+//     .catch(downloadError => {
+//       console.error('Download Error:', downloadError);
+//       button.innerText = 'Record Muse';
+//       alert('Error downloading file: ' + downloadError.message);
+//     });
+// }
+
+
+// then(data => {
+//   button.innerText = `Recording: ${duration} seconds remaining`;
+//   let interval = setInterval(() => {
+//     duration -= 1;
+//     if (duration >= 0) {
+//       button.innerText = `Recording: ${duration} seconds remaining`;
+//     }
+//   button.innerText = `Recording: ${duration} seconds remaining`;
+//   let interval = setInterval(() => {
+//     duration -= 1;
+//     if (duration >= 0) {
+//       button.innerText = `Recording: ${duration} seconds remaining`;
+//     }
+//     if (duration === 0) {
+//       clearInterval(interval);
+//       checkRecordingStatus(filename, button);
+//     }
+//   }, 1000);
