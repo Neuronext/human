@@ -6,3 +6,4 @@ package-lock.json
 samples/**/*.mp4
 samples/**/*.webm
 test/build.log
+recording_*.csv

@@ -156,6 +156,7 @@ let isDetectionRunning = false;
 let isCollectingGestures = false;
 let recordedChunks = [];
 let gestureData = [];
+let duration = 5; // Set duration for eeg collection
 
 
 // helper function: async pause
@@ -907,21 +908,71 @@ async function pwaRegister() {
 /*
 ============================ CHANGES MADE FOR LAB WORK ============================
 */
-document.getElementById('recordMuse').addEventListener('click', () => {
-fetch('http://localhost:3000/record', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({})
-})
-.then(response => response.text())
-.then(data => console.log(data))
-.catch((error) => {
-  console.error('Error:', error);
-});
-});
 
+document.getElementById('recordMuse').addEventListener('click', function() {
+  const button = this;
+  const filename = `recording_${new Date().toISOString()}.csv`.replace(/:/g, '-');
+  let interval; // Declare interval here to ensure it's accessible in all contexts
+
+  button.innerText = `Starting recording...`;
+
+  // Start recording immediately
+  fetch('http://localhost:3000/record', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ duration, filename })
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Failed to start recording');
+    }
+    return response.json(); // Assuming the server sends back a JSON response
+  })
+  .then(data => {
+    button.innerText = `Recording: ${duration} seconds remaining`;
+    interval = setInterval(() => {
+      duration -= 1;
+      button.innerText = `Recording: ${duration} seconds remaining`;
+      if (duration === 0) {
+        clearInterval(interval);
+        button.innerText = 'Preparing download...';
+        // Wait a moment before trying to download to ensure the server is ready
+        setTimeout(() => {
+          fetch(`http://localhost:3000/download/${filename}`)
+          .then(downloadResponse => {
+            if (!downloadResponse.ok) {
+              throw new Error(`Failed to download file: ${downloadResponse.status} ${downloadResponse.statusText}`);
+            }
+            return downloadResponse.blob();
+          })
+          .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            button.innerText = 'Record Muse'; // Reset the button text after download
+          })
+          .catch(downloadError => {
+            console.error('Download Error:', downloadError);
+            button.innerText = 'Record Muse'; // Reset the button text
+            alert('Error downloading file: ' + downloadError.message); // Alert the user
+          });
+        }, 1000);
+      }
+    }, 1000);
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    clearInterval(interval);
+    button.innerText = 'Record Muse'; // Reset the button text on error
+    alert('Error recording: ' + error.message); // Alert the user
+  });
+});
 
 // Get reference to the button
 const toggleBtn = document.getElementById('toggleBtn');

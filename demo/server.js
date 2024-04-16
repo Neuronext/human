@@ -1,31 +1,69 @@
 const express = require('express');
 const { exec } = require('child_process');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const port = 3000;
 
+app.use(express.json()); // Needed to parse JSON bodies
 app.use(express.static('.'));
-
-// Middleware to parse JSON bodies
-// app.use(express.json());
-app.use(cors()); 
+app.use(cors());
 
 // Route to trigger the muselsl command
 app.post('/record', (req, res) => {
-  const duration = 1; // or use req.body.duration to make it dynamic
-  const command = `muselsl record_direct --duration ${duration}`;
+  const { duration, filename } = req.body;
+  const filepath = path.resolve(__dirname, filename);
+  const command = `muselsl record_direct --duration ${duration} --filename ${filepath}`;
 
   exec(command, (error, stdout, stderr) => {
     if (error) {
-      console.error(`exec error: ${error}`);
-      res.status(500).send('Error executing muselsl command');
+      console.error(`Exec error: ${error}`);
+      res.status(500).json({ error: `Error executing command: ${stderr}` });
       return;
     }
-    console.log(`Recording completed. Output: ${stdout}`);
-    console.log(`Recording completed. Output: ${stdout}`);
+    res.json({ message: 'Recording completed and saved to CSV', filename });
   });
 });
+
+// Route to download the CSV file
+app.get('/download/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filepath = path.resolve(__dirname, filename);
+  if (!fs.existsSync(filepath)) {
+    console.error('File not found:', filepath);
+    return res.status(404).json({ error: "File not found" });
+  }
+  res.download(filepath, (err) => {
+    if (err) {
+      console.error('Error sending file:', err);
+      return res.status(500).json({ error: 'Error sending file' });
+    }
+    // File sent successfully, now delete it
+    fs.unlink(filepath, unlinkErr => {
+      if (unlinkErr) console.error('Error deleting file:', unlinkErr);
+      else console.log('File deleted successfully');
+    });
+  });
+});
+
+
+// app.get('/download/:filename', (req, res) => {
+//   const filename = req.params.filename;
+//   const filepath = path.resolve(__dirname, filename);
+//   res.download(filepath, (err) => {
+//     if (err) {
+//       console.error('Error sending file:', err);
+//     } else {
+//       // File sent successfully, now delete it
+//       fs.unlink(filepath, unlinkErr => {
+//         if (unlinkErr) console.error('Error deleting file:', unlinkErr);
+//         else console.log('File deleted successfully');
+//       });
+//     }
+//   });
+// });
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
