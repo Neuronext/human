@@ -1,0 +1,24 @@
+# Use an official Python runtime as a parent image
+FROM python:3.11.3
+
+# Install necessary system dependencies for general library support
+# RUN apt-get update && apt-get install -y \
+#     libstdc++6 \
+#     libgcc-s1 \
+#     libc6
+
+# # Set the working directory in the container
+# WORKDIR /app
+
+# # Install the pylsl package directly from PyPI
+# # RUN pip install pylsl
+
+# # Install the muse-lsl package directly from GitHub
+# RUN pip install --no-cache-dir git+https://github.com/pratikshapi/muse-lsl.git
+
+# Set the LD_LIBRARY_PATH to include the default Python site-packages directory
+# This step may be necessary if the dynamic linker still can't find liblsl64.so
+# ENV LD_LIBRARY_PATH=/usr/local/lib/python3.11/site-packages:$LD_LIBRARY_PATH
+
+# Keep the container running indefinitely to allow exec into it
+CMD ["sleep", "infinity"]

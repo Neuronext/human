@@ -1,0 +1,39 @@
+# Set the base image
+FROM node:18
+
+# Set the working directory
+WORKDIR /app
+
+# Install system dependencies for 'canvas'
+RUN apt-get update && apt-get install -y \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    libfontconfig1-dev \
+    build-essential
+
+# Copy package files first
+COPY package.json package-lock.json ./
+
+# Debug: Show file list after copying package files
+RUN ls -al
+
+# Install dependencies with legacy peer dependencies option
+RUN npm install --legacy-peer-deps
+
+# Debug: Show node_modules after installation
+RUN ls -al node_modules
+
+# Copy the rest of the client application
+COPY . .
+
+# Debug: Show all files in /app to understand what gets copied
+RUN ls -al
+
+# Expose the port the client runs on
+EXPOSE 8000
+
+# Command to run the application
+CMD ["npm", "run", "dev"]

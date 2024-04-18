@@ -26,3 +26,11 @@ changes todo (04/01):
 - check if i can record video instead and apply gestures in post
 - eeg data needs to recorded concurrently with the video
 - deploy - check what ports need to be opened, check if port 3k is working
+
+
+changes (04/18):
+- fix containrization issues for server
+- containerize the setup and deploy 
+- box for muse, need original vid as well
+- readme for the setup 
+- instructions to reproduce the setup on local 

@@ -44,22 +44,6 @@ app.get('/status/:filename', (req, res) => {
   }
 });
 
-// // Route to trigger the muselsl command
-// app.post('/record', (req, res) => {
-//   const { duration, filename } = req.body;
-//   const filepath = path.resolve(__dirname, filename);
-//   const command = `muselsl record_direct --duration ${duration} --filename ${filepath}`;
-
-//   exec(command, (error, stdout, stderr) => {
-//     if (error) {
-//       console.error(`Exec error: ${error}`);
-//       res.status(500).json({ error: `Error executing command: ${stderr}` });
-//       return;
-//     }
-//     res.json({ message: 'Recording completed and saved to CSV', filename });
-//   });
-// });
-
 // Route to download the CSV file
 app.get('/download/:filename', (req, res) => {
   const filename = req.params.filename;

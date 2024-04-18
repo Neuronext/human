@@ -1,0 +1,41 @@
+
+
+# Use an official Python runtime as a parent image
+FROM python:3.11
+
+# Install necessary system dependencies for general library support
+RUN apt-get update && apt-get install -y \
+    libstdc++6 \
+    libgcc-s1 \
+    libc6 \
+    wget \
+    ca-certificates
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Install the muse-lsl package directly from GitHub
+RUN pip install --no-cache-dir git+https://github.com/pratikshapi/muse-lsl.git
+
+# Download and install the liblsl64.so manually
+RUN wget [URL_TO_liblsl64.so] -O /usr/local/lib/python3.11/site-packages/pylsl/liblsl64.so
+
+# Ensure the library is executable
+RUN chmod +x /usr/local/lib/python3.11/site-packages/pylsl/liblsl64.so
+
+# Set the LD_LIBRARY_PATH in case the pylsl library has issues finding its dependencies
+ENV LD_LIBRARY_PATH=/usr/local/lib/python3.11/site-packages/pylsl:$LD_LIBRARY_PATH
+
+# Keep the container running indefinitely to allow exec into it
+CMD ["sleep", "infinity"]
+
+
+
+# # Create a script to run the application and view the output
+# RUN echo "#!/bin/bash" > run.sh \
+#     && echo "muselsl record_direct --duration 5 --filename output.csv" >> run.sh \
+#     && echo "cat output.csv" >> run.sh \
+#     && chmod +x run.sh
+
+# # Command to run the script
+# CMD ["./run.sh"]

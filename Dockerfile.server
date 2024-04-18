@@ -1,0 +1,45 @@
+# Set the base image
+FROM node:18
+
+# Set the working directory
+WORKDIR /app
+
+# Install system dependencies for 'canvas'
+RUN apt-get update && apt-get install -y \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    libfontconfig1-dev \
+    build-essential
+
+# Install nodemon globally
+RUN npm install -g nodemon
+
+# Copy package files first
+COPY package.json package-lock.json ./
+
+# Debug: Show file list after copying package files
+RUN ls -al
+
+# Install dependencies with legacy peer dependencies option
+RUN npm install --legacy-peer-deps
+
+# Debug: Show node_modules after installation
+RUN ls -al node_modules
+
+# Copy the rest of the server application
+COPY demo/ demo/
+
+# Change directory to 'demo' to run the subsequent commands
+WORKDIR /app/demo
+
+# Debug: Show all files in the demo directory to understand what gets copied
+RUN ls -al
+
+# Expose the port the server runs on
+EXPOSE 3000
+
+# Command to run the application
+CMD ["nodemon", "server.js"]

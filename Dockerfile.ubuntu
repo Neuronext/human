@@ -1,0 +1,51 @@
+# Use the latest stable Ubuntu release
+FROM ubuntu:latest
+
+# Set environment variables to avoid user interaction during installations
+ENV DEBIAN_FRONTEND=noninteractive
+
+# # Install necessary packages
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    wget \
+    ca-certificates \
+    build-essential \
+    libstdc++6 \
+    libgcc-s1 \
+    libc6 \
+    libssl-dev
+
+# # Add deadsnakes PPA for newer Python versions
+RUN add-apt-repository ppa:deadsnakes/ppa
+
+# # Install Python 3.11
+RUN apt-get update && apt-get install -y python3.11 python3.11-venv python3.11-dev python3-pip
+
+# # Set python3.11 as the default python
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+
+# # Install pip for Python 3.11
+RUN python3 -m pip install --upgrade pip
+
+# # Set the working directory in the container
+WORKDIR /app
+
+# wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+#     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
+#     rm ~/miniconda.sh
+# ENV PATH /opt/conda/bin:$PATH
+
+
+# # Install the pylsl package
+RUN python3 -m pip install pylsl
+
+# # Install the muse-lsl package directly from GitHub
+# RUN python3 -m pip install --no-cache-dir git+https://github.com/pratikshapi/muse-lsl.git
+
+# # Set environment variables to ensure the library can be found
+# ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
+
+
+# Keep the container running indefinitely to allow exec into it
+CMD ["sleep", "infinity"]
