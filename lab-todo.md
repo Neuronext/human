@@ -34,3 +34,16 @@ changes (04/18):
 - box for muse, need original vid as well
 - readme for the setup 
 - instructions to reproduce the setup on local 
+
+
+
+
+some changes made that needs to be documented:
+- python muselsl - changed code in record.py, documented in github
+- arm -> amd, for containerization, document the commands
+  - <document it here>
+- started with ubuntu 22 container instead of python
+- if we install conda we need to either deactivate it set the PATH=$PATH:<conda_path> so python is not picked up from conda
+- liblsl is picked up from the deb package and not the pip package
+- liblsl has some dependencies that need to be installed before
+  - <document it here>

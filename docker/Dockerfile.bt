@@ -1,5 +1,5 @@
 FROM ubuntu:latest
 RUN apt-get update
 RUN apt-get install -y bluez bluetooth dbus bluez-tools
-COPY ./docker_entrypoint.sh /docker_entrypoint.sh
-ENTRYPOINT sh docker_entrypoint.sh
+COPY ./entrypoint.sh /docker_entrypoint.sh
+ENTRYPOINT sh entrypoint.sh
