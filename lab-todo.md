@@ -1,40 +1,24 @@
-- hosting (2 hosting face camera + eeg data)
-- data export with and without overlaying it (button to show this functionality)
-- (how are they capturing data) 
-- add a neurostream link for collecting muse data
-- max recording needed 
+todo (05/02):
+- raw vid required
+- readme for the setup, code, and deploy on local 
+- diff between demo/index.js and demo/typescript/index.ts
 
+Issues with the setup currently:
+- switching tab/window/desktop stops recording of the data 
+- if there more than one muse headsets around, we do not have an option to choose
+- the muse data is not recorded as soon as the button starts countdown
+- there is no way to track more than one individual at a time (probably because there is no ML model for it)
+- 
 
-
-changes todo (04/01):
+Low:
 - icon changes
-- can we package everthing to server side?
-- prep for the call @ 11 
-- start and countdown logic 
-- logic to record the video so we can post process it later
 - figure out the number of frames per second
-- can we remove some of the coordinates from the data?
-- can we downsample some of the coords or the gestures?
-- are we able to record muse when the video is getting captured? meaning record the raw samples
-- do we need to pair device or direct record works?
-- visualize the data to see if it is dummy or not 
+- remove coordinates from the data/downsample teh gesture data acquired in gesture.json
+- check how much space each 1 min video takes + muse 
+
+
+Enhancements:
 - containerize the app using podman 
-- check how much space each 1 min video takes
-- check how much space each 1 min of gestures etc data takes + muse
-- button for start and stop
-- check how much duration i can take for one person 
-- check if i can record video instead and apply gestures in post
-- eeg data needs to recorded concurrently with the video
-- deploy - check what ports need to be opened, check if port 3k is working
-
-
-changes (04/18):
-- fix containrization issues for server
-- containerize the setup and deploy 
-- box for muse, need original vid as well
-- readme for the setup 
-- instructions to reproduce the setup on local 
-
 
 
 
