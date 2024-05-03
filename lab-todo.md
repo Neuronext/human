@@ -2,6 +2,7 @@ todo (05/02):
 - raw vid required
 - readme for the setup, code, and deploy on local 
 - diff between demo/index.js and demo/typescript/index.ts
+- cleanup code - too many unnecessary comments
 
 Issues with the setup currently:
 - switching tab/window/desktop stops recording of the data 
@@ -15,7 +16,6 @@ Low:
 - figure out the number of frames per second
 - remove coordinates from the data/downsample teh gesture data acquired in gesture.json
 - check how much space each 1 min video takes + muse 
-
 
 Enhancements:
 - containerize the app using podman 
