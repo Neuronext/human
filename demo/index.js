@@ -1022,15 +1022,6 @@ toggleBtn.addEventListener('click', () => {
   }
 });
 
-function captureRawVideoFrame(canvas) {
-  const rawCanvas = document.createElement('canvas');
-  rawCanvas.width = canvas.width;
-  rawCanvas.height = canvas.height;
-  const ctx = rawCanvas.getContext('2d');
-  ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height);
-  return rawCanvas.toDataURL(); // Return the raw video frame as a data URL
-}
-
 // Recording functions remain the same as previously defined
 // Start recording the canvas stream and gesture data
 function startRecording(canvas) {
@@ -1041,8 +1032,6 @@ function startRecording(canvas) {
   mediaRecorder.ondataavailable = event => {
     if (event.data.size > 0) {
       recordedChunks.push(event.data);
-      const rawFrame = captureRawVideoFrame(canvas);
-      recordedChunksRaw.push(rawFrame); // Store the raw frame data URL
     }
   };
 
@@ -1051,11 +1040,7 @@ function startRecording(canvas) {
     const url = URL.createObjectURL(blob);
     downloadVideo(url, mimeType, 'gesturedVideo'); // Download gestured video
 
-    const rawBlob = new Blob(recordedChunksRaw, { type: mimeType });
-    const rawUrl = URL.createObjectURL(rawBlob);
-    downloadVideo(rawUrl, mimeType, 'rawVideo'); // Download raw video
     recordedChunks = [];
-    recordedChunksRaw = [];
   };
 
   mediaRecorder.start();
