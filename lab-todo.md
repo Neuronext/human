@@ -1,5 +1,7 @@
 todo (05/02):
 - raw vid required
+- if the tab is not active, still get the data
+- figure out if this is the most updated model or not
 - readme for the setup, code, and deploy on local 
 - diff between demo/index.js and demo/typescript/index.ts
 - cleanup code - too many unnecessary comments

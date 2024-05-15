@@ -155,6 +155,7 @@ let mediaRecorder;
 let isDetectionRunning = false;
 let isCollectingGestures = false;
 let recordedChunks = [];
+let recordedChunksRaw = [];
 let gestureData = [];
 
 
@@ -1021,35 +1022,64 @@ toggleBtn.addEventListener('click', () => {
   }
 });
 
+function captureRawVideoFrame(canvas) {
+  const rawCanvas = document.createElement('canvas');
+  rawCanvas.width = canvas.width;
+  rawCanvas.height = canvas.height;
+  const ctx = rawCanvas.getContext('2d');
+  ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height);
+  return rawCanvas.toDataURL(); // Return the raw video frame as a data URL
+}
+
 // Recording functions remain the same as previously defined
 // Start recording the canvas stream and gesture data
 function startRecording(canvas) {
   const stream = canvas.captureStream(30); // Capture at 30 fps
   let mimeType = MediaRecorder.isTypeSupported('video/mp4; codecs="avc1.42E01E, mp4a.40.2"') ? 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"' : 'video/webm; codecs=vp9';
   mediaRecorder = new MediaRecorder(stream, { mimeType });
+
   mediaRecorder.ondataavailable = event => {
-    if (event.data.size > 0) recordedChunks.push(event.data);
+    if (event.data.size > 0) {
+      recordedChunks.push(event.data);
+      const rawFrame = captureRawVideoFrame(canvas);
+      recordedChunksRaw.push(rawFrame); // Store the raw frame data URL
+    }
   };
+
   mediaRecorder.onstop = () => {
     const blob = new Blob(recordedChunks, { type: mimeType });
     const url = URL.createObjectURL(blob);
-    downloadVideo(url, mimeType);
+    downloadVideo(url, mimeType, 'gesturedVideo'); // Download gestured video
+
+    const rawBlob = new Blob(recordedChunksRaw, { type: mimeType });
+    const rawUrl = URL.createObjectURL(rawBlob);
+    downloadVideo(rawUrl, mimeType, 'rawVideo'); // Download raw video
     recordedChunks = [];
+    recordedChunksRaw = [];
   };
+
   mediaRecorder.start();
+
+  // Continuously capture frames even when the tab is inactive
+  setInterval(() => {
+    const rawFrame = captureRawVideoFrame(canvas);
+    recordedChunksRaw.push(rawFrame);
+  }, 1000 / 30); // Capture at 30 fps
+
   gestureData = []; // Reset gesture data
 }
 
+
 // Function to download the video with timestamp in filename
-function downloadVideo(url, mimeType) {
+function downloadVideo(url, mimeType, filePrefix) {
   const now = new Date();
   const timestamp = now.toISOString().replace(/:/g, '-').replace(/\.\d+Z$/, '');
   const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
-  const filename = `recordedVideo_${timestamp}.${extension}`;
+  const filename = `${filePrefix}_${timestamp}.${extension}`;
 
   const downloadLink = document.createElement('a');
   downloadLink.href = url;
-  downloadLink.download = filename; // Use the timestamped filename with correct extension
+  downloadLink.download = filename;
   document.body.appendChild(downloadLink);
   downloadLink.click();
   document.body.removeChild(downloadLink);
@@ -1057,7 +1087,7 @@ function downloadVideo(url, mimeType) {
 }
 
 // Function to download CSV or JSON
-function downloadData(data, format = 'csv') {
+function downloadData(data, format = 'json') {
   const now = new Date();
   const timestamp = now.toISOString().replace(/:/g, '-').replace(/\.\d+Z$/, '');
   
